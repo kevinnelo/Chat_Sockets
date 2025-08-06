@@ -27,15 +27,12 @@
       }
       if (fileInput.files.length > 0) {
         const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          socket.emit('chat file', {
-            fileName: file.name,
-            fileType: file.type,
-            fileData: evt.target.result
-          });
-        };
-        reader.readAsArrayBuffer(file);
+        const formData = new FormData();
+        formData.append('file', file);
+        fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
         fileInput.value = '';
       }
     });
@@ -50,7 +47,7 @@
     socket.on('chat file', (data) => {
       const item = document.createElement('li');
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(new Blob([data.fileData], { type: data.fileType }));
+      link.href = data.fileUrl;
       link.download = data.fileName;
       link.textContent = `Archivo: ${data.fileName}`;
       item.appendChild(link);
