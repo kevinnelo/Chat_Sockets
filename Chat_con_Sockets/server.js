@@ -9,7 +9,7 @@ const app = express();
 const server = http.createServer(app);
 
 const io = require('socket.io')(server, {
-  maxHttpBufferSize: 1000e6 // 5 MB
+  maxHttpBufferSize: 1000e6 // 1 GB
 });
 let mensajes = []; // Aquí se guardan los mensajes
 

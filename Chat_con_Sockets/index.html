@@ -26,12 +26,15 @@
       }
       if (fileInput.files.length > 0) {
         const file = fileInput.files[0];
-        const formData = new FormData();
-        formData.append('file', file);
-        fetch('/upload', {
-          method: 'POST',
-          body: formData
-        });
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          socket.emit('chat file', {
+            fileName: file.name,
+            fileType: file.type,
+            fileData: evt.target.result
+          });
+        };
+        reader.readAsArrayBuffer(file);
         fileInput.value = '';
       }
     });
@@ -46,7 +49,7 @@
     socket.on('chat file', (data) => {
       const item = document.createElement('li');
       const link = document.createElement('a');
-      link.href = data.fileUrl;
+      link.href = URL.createObjectURL(new Blob([data.fileData], { type: data.fileType }));
       link.download = data.fileName;
       link.textContent = `Archivo: ${data.fileName}`;
       item.appendChild(link);
@@ -62,73 +65,6 @@
       });
       window.scrollTo(0, document.body.scrollHeight);
     });
-
-    // Selección de archivo
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    document.body.insertBefore(fileInput, form);
-
-    const CHUNK_SIZE = 64 * 1024; // 64KB por fragmento
-
-    fileInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      // Solicita al servidor el último fragmento recibido (si existe)
-      socket.emit('file resume', { fileName: file.name, fileSize: file.size });
-
-      socket.once('file resume', ({ receivedBytes = 0 }) => {
-        sendFileChunks(file, receivedBytes);
-      });
-    });
-
-    function sendFileChunks(file, startByte = 0) {
-      let offset = startByte;
-
-      function sendNextChunk() {
-        if (offset >= file.size) {
-          socket.emit('file end', { fileName: file.name });
-          return;
-        }
-        const chunk = file.slice(offset, offset + CHUNK_SIZE);
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          socket.emit('file chunk', {
-            fileName: file.name,
-            chunk: e.target.result,
-            offset: offset
-          });
-          offset += CHUNK_SIZE;
-          sendNextChunk();
-        };
-        reader.readAsArrayBuffer(chunk);
-      }
-
-      sendNextChunk();
-    }
   </script>
 </body>
 </html>
-
-const files = {};
-
-io.on('connection', (socket) => {
-  socket.on('file resume', ({ fileName, fileSize }) => {
-    const receivedBytes = files[fileName]?.receivedBytes || 0;
-    socket.emit('file resume', { receivedBytes });
-  });
-
-  socket.on('file chunk', ({ fileName, chunk, offset }) => {
-    if (!files[fileName]) files[fileName] = { receivedBytes: 0, data: [] };
-    files[fileName].data.push(Buffer.from(chunk));
-    files[fileName].receivedBytes = offset + chunk.byteLength;
-    // Aquí puedes guardar en disco si quieres
-  });
-
-  socket.on('file end', ({ fileName }) => {
-    // Unir los fragmentos y guardar el archivo
-    const fileBuffer = Buffer.concat(files[fileName].data);
-    require('fs').writeFileSync(`uploads/${fileName}`, fileBuffer);
-    delete files[fileName];
-  });
-});
