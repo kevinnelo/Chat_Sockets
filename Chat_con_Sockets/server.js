@@ -7,8 +7,10 @@ const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
 
+const io = require('socket.io')(server, {
+  maxHttpBufferSize: 1000e6 // 5 MB
+});
 let mensajes = []; // Aquí se guardan los mensajes
 
 app.use(express.static(__dirname));
