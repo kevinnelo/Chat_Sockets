@@ -7,6 +7,7 @@
   <ul id="messages"></ul>
   <form id="form">
     <input id="input" autocomplete="off" placeholder="Escribe tu mensaje" />
+    <input type="file" id="fileInput" />
     <button>Enviar</button>
   </form>
 
@@ -15,6 +16,7 @@
     const socket = io();
     const form = document.getElementById('form');
     const input = document.getElementById('input');
+    const fileInput = document.getElementById('fileInput');
     const messages = document.getElementById('messages');
 
     form.addEventListener('submit', (e) => {
@@ -23,11 +25,35 @@
         socket.emit('chat message', input.value);
         input.value = '';
       }
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          socket.emit('chat file', {
+            fileName: file.name,
+            fileType: file.type,
+            fileData: evt.target.result
+          });
+        };
+        reader.readAsArrayBuffer(file);
+        fileInput.value = '';
+      }
     });
 
     socket.on('chat message', (msg) => {
       const item = document.createElement('li');
       item.textContent = msg;
+      messages.appendChild(item);
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+
+    socket.on('chat file', (data) => {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(new Blob([data.fileData], { type: data.fileType }));
+      link.download = data.fileName;
+      link.textContent = `Archivo: ${data.fileName}`;
+      item.appendChild(link);
       messages.appendChild(item);
       window.scrollTo(0, document.body.scrollHeight);
     });
