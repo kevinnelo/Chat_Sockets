@@ -22,6 +22,10 @@ io.on('connection', (socket) => {
     io.emit('chat message', msg); // Envía a todos
   });
 
+  socket.on('chat file', (data) => {
+    io.emit('chat file', data); // retransmite el archivo a todos
+  });
+
   socket.on('disconnect', () => {
     console.log('Usuario desconectado');
   });
