@@ -49,11 +49,24 @@
     socket.on('chat file', (data) => {
       const item = document.createElement('li');
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(new Blob([data.fileData], { type: data.fileType }));
+      link.href = data.filePath;
       link.download = data.fileName;
       link.textContent = `Archivo: ${data.fileName}`;
       item.appendChild(link);
       messages.appendChild(item);
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+
+    socket.on('file history', (files) => {
+      files.forEach((data) => {
+        const item = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = data.filePath;
+        link.download = data.fileName;
+        link.textContent = `Archivo: ${data.fileName}`;
+        item.appendChild(link);
+        messages.appendChild(item);
+      });
       window.scrollTo(0, document.body.scrollHeight);
     });
 
